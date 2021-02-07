@@ -30,75 +30,89 @@
 #include "protocol.h"
 #include "sdk_protocol.h"
 
-namespace livox_ros {
+namespace livox_ros
+{
 const uint32_t kCacheSize = 8192;
 const uint32_t kMoveCacheLimit = 1536;
 
-enum FsmParseState {
-  kSearchPacketPreamble = 0,
-  kFindPacketLength = 1,
-  kGetPacketData = 2,
-  kParseStepUndef
+enum FsmParseState
+{
+    kSearchPacketPreamble = 0,
+    kFindPacketLength = 1,
+    kGetPacketData = 2,
+    kParseStepUndef
 };
 
 /** Communication data cache define */
-typedef struct {
-  uint8_t buf[kCacheSize];
-  uint32_t rd_idx;
-  uint32_t wr_idx;
-  uint32_t size;
+typedef struct
+{
+    uint8_t buf[kCacheSize];
+    uint32_t rd_idx;
+    uint32_t wr_idx;
+    uint32_t size;
 } CommCache;
 
-class CommProtocol {
- public:
-  CommProtocol(ProtocolConfig &config);
-  ~CommProtocol();
+class CommProtocol
+{
+  public:
+    CommProtocol(ProtocolConfig& config);
+    ~CommProtocol();
 
-  int32_t Pack(uint8_t *o_buf, uint32_t o_buf_size, uint32_t *o_len,
-               const CommPacket &i_packet);
+    int32_t Pack(uint8_t* o_buf, uint32_t o_buf_size, uint32_t* o_len, const CommPacket& i_packet);
 
-  int32_t ParseCommStream(CommPacket *o_pack);
+    int32_t ParseCommStream(CommPacket* o_pack);
 
-  uint8_t *FetchCacheFreeSpace(uint32_t *o_len);
+    uint8_t* FetchCacheFreeSpace(uint32_t* o_len);
 
-  int32_t UpdateCacheWrIdx(uint32_t used_size);
+    int32_t UpdateCacheWrIdx(uint32_t used_size);
 
-  uint16_t GetAndUpdateSeqNum();
+    uint16_t GetAndUpdateSeqNum();
 
-  void ResetParser();
+    void ResetParser();
 
- private:
-  uint32_t GetCacheTailSize();
-  uint32_t GetValidDataSize();
-  void UpdateCache(void);
-  uint8_t *GetCacheReadPos() { return &cache_.buf[cache_.rd_idx]; }
-  void ResetCache() {
-    cache_.wr_idx = 0;
-    cache_.rd_idx = 0;
-    cache_.size = kCacheSize;
-  }
-
-  ProtocolConfig config_;
-  Protocol *protocol_;
-  CommCache cache_;
-  uint16_t seq_num_;
-
-  bool is_length_known;
-  bool IsLengthKnown() { return is_length_known; }
-
-  volatile uint32_t offset_to_read_index_;
-  uint32_t packet_length_;
-  volatile uint32_t fsm_parse_step_;
-  int32_t FsmSearchPacketPreamble();
-  int32_t FsmFindPacketLength();
-  int32_t FsmGetPacketData(CommPacket *o_pack);
-  void FsmParserStateTransfer(uint32_t new_state) {
-    if (new_state < kParseStepUndef) {
-      fsm_parse_step_ = new_state;
-    } else {
-      fsm_parse_step_ = kSearchPacketPreamble;
+  private:
+    uint32_t GetCacheTailSize();
+    uint32_t GetValidDataSize();
+    void UpdateCache(void);
+    uint8_t* GetCacheReadPos()
+    {
+        return &cache_.buf[cache_.rd_idx];
     }
-  }
+    void ResetCache()
+    {
+        cache_.wr_idx = 0;
+        cache_.rd_idx = 0;
+        cache_.size = kCacheSize;
+    }
+
+    ProtocolConfig config_;
+    Protocol* protocol_;
+    CommCache cache_;
+    uint16_t seq_num_;
+
+    bool is_length_known;
+    bool IsLengthKnown()
+    {
+        return is_length_known;
+    }
+
+    volatile uint32_t offset_to_read_index_;
+    uint32_t packet_length_;
+    volatile uint32_t fsm_parse_step_;
+    int32_t FsmSearchPacketPreamble();
+    int32_t FsmFindPacketLength();
+    int32_t FsmGetPacketData(CommPacket* o_pack);
+    void FsmParserStateTransfer(uint32_t new_state)
+    {
+        if (new_state < kParseStepUndef)
+        {
+            fsm_parse_step_ = new_state;
+        }
+        else
+        {
+            fsm_parse_step_ = kSearchPacketPreamble;
+        }
+    }
 };
 
 }  // namespace livox_ros

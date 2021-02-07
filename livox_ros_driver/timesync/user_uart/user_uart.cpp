@@ -31,164 +31,184 @@
 #include <termios.h>
 #include <unistd.h>
 
-namespace livox_ros {
-
-UserUart::UserUart(uint8_t baudrate_index, uint8_t parity)
-    : baudrate_(baudrate_index), parity_(parity) {
-  fd_ = 0;
-  is_open_ = false;
+namespace livox_ros
+{
+UserUart::UserUart(uint8_t baudrate_index, uint8_t parity) : baudrate_(baudrate_index), parity_(parity)
+{
+    fd_ = 0;
+    is_open_ = false;
 }
 
-UserUart::~UserUart() {
-  is_open_ = false;
-  if (fd_ > 0) {
-    /** first we flush the port */
-    tcflush(fd_, TCOFLUSH);
-    tcflush(fd_, TCIFLUSH);
+UserUart::~UserUart()
+{
+    is_open_ = false;
+    if (fd_ > 0)
+    {
+        /** first we flush the port */
+        tcflush(fd_, TCOFLUSH);
+        tcflush(fd_, TCIFLUSH);
 
-    close(fd_);
-  }
-}
-
-int UserUart::Open(const char *filename) {
-  fd_ = open(filename, O_RDWR | O_NOCTTY);  //| O_NDELAY
-  if (fd_ < 0) {
-    printf("Open %s fail!\n", filename);
-    return -1;
-  } else {
-    chmod(filename, S_IRWXU | S_IRWXG | S_IRWXO); /* need add here */
-    printf("Open %s success!\n", filename);
-  }
-
-  if (fd_ > 0) {
-    /** set baudrate and parity,etc. */
-    if (Setup(baudrate_, parity_)) {
-      return -1;
+        close(fd_);
     }
-  }
-
-  is_open_ = true;
-  return 0;
 }
 
-int UserUart::Close() {
-  is_open_ = false;
-  if (fd_ > 0) {
-    /** first we flush the port */
-    tcflush(fd_, TCOFLUSH);
-    tcflush(fd_, TCIFLUSH);
-    return close(fd_);
-  }
+int UserUart::Open(const char* filename)
+{
+    fd_ = open(filename, O_RDWR | O_NOCTTY);  //| O_NDELAY
+    if (fd_ < 0)
+    {
+        printf("Open %s fail!\n", filename);
+        return -1;
+    }
+    else
+    {
+        chmod(filename, S_IRWXU | S_IRWXG | S_IRWXO); /* need add here */
+        printf("Open %s success!\n", filename);
+    }
 
-  return -1;
+    if (fd_ > 0)
+    {
+        /** set baudrate and parity,etc. */
+        if (Setup(baudrate_, parity_))
+        {
+            return -1;
+        }
+    }
+
+    is_open_ = true;
+    return 0;
+}
+
+int UserUart::Close()
+{
+    is_open_ = false;
+    if (fd_ > 0)
+    {
+        /** first we flush the port */
+        tcflush(fd_, TCOFLUSH);
+        tcflush(fd_, TCIFLUSH);
+        return close(fd_);
+    }
+
+    return -1;
 }
 
 /** sets up the port parameters */
-int UserUart::Setup(uint8_t baudrate_index, uint8_t parity) {
-  static uint32_t baud_map[19] = {
-      B2400,    B4800,    B9600,    B19200,   B38400,  B57600,   B115200,
-      B230400,  B460800,  B500000,  B576000,  B921600, B1152000, B1500000,
-      B2000000, B2500000, B3000000, B3500000, B4000000};
-  tcflag_t baudrate;
-  struct termios options;
+int UserUart::Setup(uint8_t baudrate_index, uint8_t parity)
+{
+    static uint32_t baud_map[19] = { B2400,    B4800,    B9600,    B19200,   B38400,  B57600,   B115200,
+                                     B230400,  B460800,  B500000,  B576000,  B921600, B1152000, B1500000,
+                                     B2000000, B2500000, B3000000, B3500000, B4000000 };
+    tcflag_t baudrate;
+    struct termios options;
 
-  if ((baudrate_index > BR4000000) || (parity > P_7S1)) {
-    return -1;
-  }
+    if ((baudrate_index > BR4000000) || (parity > P_7S1))
+    {
+        return -1;
+    }
 
-  /** clear old setting completely,must add here for CDC serial */
-  tcgetattr(fd_, &options);
-  memset(&options, 0, sizeof(options));
-  tcflush(fd_, TCIOFLUSH);
-  tcsetattr(fd_, TCSANOW, &options);
-  usleep(10000);
+    /** clear old setting completely,must add here for CDC serial */
+    tcgetattr(fd_, &options);
+    memset(&options, 0, sizeof(options));
+    tcflush(fd_, TCIOFLUSH);
+    tcsetattr(fd_, TCSANOW, &options);
+    usleep(10000);
 
-  /** Enable the receiver and set local mode... */
-  options.c_cflag |= (CLOCAL | CREAD);
+    /** Enable the receiver and set local mode... */
+    options.c_cflag |= (CLOCAL | CREAD);
 
-  /** Disable hardware flow */
-  // options.c_cflag &= ~CRTSCTS;
+    /** Disable hardware flow */
+    // options.c_cflag &= ~CRTSCTS;
 
-  /** Disable software flow */
-  // options.c_iflag &= ~(IXON | IXOFF | IXANY);
+    /** Disable software flow */
+    // options.c_iflag &= ~(IXON | IXOFF | IXANY);
 
-  // options.c_oflag &= ~OPOST;
+    // options.c_oflag &= ~OPOST;
 
-  /** set boadrate */
-  options.c_cflag &= ~CBAUD;
-  baudrate = baud_map[baudrate_index];
-  options.c_cflag |= baudrate;
+    /** set boadrate */
+    options.c_cflag &= ~CBAUD;
+    baudrate = baud_map[baudrate_index];
+    options.c_cflag |= baudrate;
 
-  switch (parity) {
-    case P_8N1:
-      /** No parity (8N1)  */
-      options.c_cflag &= ~PARENB;
-      options.c_cflag &= ~CSTOPB;
-      options.c_cflag &= ~CSIZE;
-      options.c_cflag |= CS8;
-      break;
-    case P_7E1:
-      /** Even parity (7E1) */
-      options.c_cflag |= PARENB;
-      options.c_cflag &= ~PARODD;
-      options.c_cflag &= ~CSTOPB;
-      options.c_cflag &= ~CSIZE;
-      options.c_cflag |= CS7;
-      break;
-    case P_7O1:
-      /** Odd parity (7O1) */
-      options.c_cflag |= PARENB;
-      options.c_cflag |= PARODD;
-      options.c_cflag &= ~CSTOPB;
-      options.c_cflag &= ~CSIZE;
-      options.c_cflag |= CS7;
-      break;
-    case P_7S1:
-      /** Space parity is setup the same as no parity (7S1)  */
-      options.c_cflag &= ~PARENB;
-      options.c_cflag &= ~CSTOPB;
-      options.c_cflag &= ~CSIZE;
-      options.c_cflag |= CS8;
-      break;
-    default:
-      return -1;
-  }
+    switch (parity)
+    {
+        case P_8N1:
+            /** No parity (8N1)  */
+            options.c_cflag &= ~PARENB;
+            options.c_cflag &= ~CSTOPB;
+            options.c_cflag &= ~CSIZE;
+            options.c_cflag |= CS8;
+            break;
+        case P_7E1:
+            /** Even parity (7E1) */
+            options.c_cflag |= PARENB;
+            options.c_cflag &= ~PARODD;
+            options.c_cflag &= ~CSTOPB;
+            options.c_cflag &= ~CSIZE;
+            options.c_cflag |= CS7;
+            break;
+        case P_7O1:
+            /** Odd parity (7O1) */
+            options.c_cflag |= PARENB;
+            options.c_cflag |= PARODD;
+            options.c_cflag &= ~CSTOPB;
+            options.c_cflag &= ~CSIZE;
+            options.c_cflag |= CS7;
+            break;
+        case P_7S1:
+            /** Space parity is setup the same as no parity (7S1)  */
+            options.c_cflag &= ~PARENB;
+            options.c_cflag &= ~CSTOPB;
+            options.c_cflag &= ~CSIZE;
+            options.c_cflag |= CS8;
+            break;
+        default:
+            return -1;
+    }
 
-  /** now we setup the values in port's termios */
-  options.c_iflag &= ~INPCK;
+    /** now we setup the values in port's termios */
+    options.c_iflag &= ~INPCK;
 
-  /** Enable non-canonical */
-  // options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+    /** Enable non-canonical */
+    // options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
 
-  /** Time to wait for data */
-  options.c_cc[VTIME] = 1;
+    /** Time to wait for data */
+    options.c_cc[VTIME] = 1;
 
-  /** Minimum number of characters to read */
-  options.c_cc[VMIN] = 1;
+    /** Minimum number of characters to read */
+    options.c_cc[VMIN] = 1;
 
-  /** flush the port */
-  tcflush(fd_, TCIOFLUSH);
+    /** flush the port */
+    tcflush(fd_, TCIOFLUSH);
 
-  /** send new config to the port */
-  tcsetattr(fd_, TCSANOW, &options);
+    /** send new config to the port */
+    tcsetattr(fd_, TCSANOW, &options);
 
-  return 0;
+    return 0;
 }
 
-ssize_t UserUart::Write(const char *buffer, size_t size) {
-  if (fd_ > 0) {
-    return write(fd_, buffer, size);
-  } else {
-    return 0;
-  }
+ssize_t UserUart::Write(const char* buffer, size_t size)
+{
+    if (fd_ > 0)
+    {
+        return write(fd_, buffer, size);
+    }
+    else
+    {
+        return 0;
+    }
 }
 
-ssize_t UserUart::Read(char *buffer, size_t size) {
-  if (fd_ > 0) {
-    return read(fd_, buffer, size);
-  } else {
-    return 0;
-  }
+ssize_t UserUart::Read(char* buffer, size_t size)
+{
+    if (fd_ > 0)
+    {
+        return read(fd_, buffer, size);
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 }  // namespace livox_ros

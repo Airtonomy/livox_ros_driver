@@ -27,44 +27,50 @@
 
 #include <stdint.h>
 
-namespace livox_ros {
-
+namespace livox_ros
+{
 const uint32_t kDevNameLengthMax = 256;
 
 /** Communication device type define */
-enum CommDeviceType {
-  kCommDevUart,
-  kCommDevUsb,
-  kCommDevCan,
-  kCommDevEthernet,
-  kCommDevUndef
+enum CommDeviceType
+{
+    kCommDevUart,
+    kCommDevUsb,
+    kCommDevCan,
+    kCommDevEthernet,
+    kCommDevUndef
 };
 
 /** Communication device uart config */
-struct CommDevUartConfig {
-  uint8_t baudrate;
-  uint8_t parity;
+struct CommDevUartConfig
+{
+    uint8_t baudrate;
+    uint8_t parity;
 };
 
 /** Communication device usb config */
-struct CommDevUsbConfig {
-  void *data;
+struct CommDevUsbConfig
+{
+    void* data;
 };
 
 /** Communication device can config */
-struct CommDevCanConfig {
-  void *data;
+struct CommDevCanConfig
+{
+    void* data;
 };
 
 /** Communication device config */
-typedef struct {
-  uint8_t type;
-  char name[kDevNameLengthMax];
-  union {
-    CommDevUartConfig uart;
-    CommDevUsbConfig usb;
-    CommDevCanConfig can;
-  } config;
+typedef struct
+{
+    uint8_t type;
+    char name[kDevNameLengthMax];
+    union
+    {
+        CommDevUartConfig uart;
+        CommDevUsbConfig usb;
+        CommDevCanConfig can;
+    } config;
 } CommDevConfig;
 
 }  // namespace livox_ros
